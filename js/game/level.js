@@ -19,8 +19,8 @@ const level = {
 		player.mat.pos.x = 0;
 		player.mat.pos.y = 0;
 		//player.mat.vel.x = 10;
-		level.spawnMapCircle({x: 0, y: 2300}, 2000, {restitution: 0.5});
-		level.spawnMapCircle({x: 0, y: 4250}, 100, {restitution: 0.5, mass: 0});
+		level.spawnMapCircle({x: 0, y: 2300}, 2000, {});
+		level.spawnMapCircle({x: 0, y: 4250}, 100, {mass: 1000});
 	}
 }
 level.intro();

@@ -5,7 +5,21 @@ let player = {
 	},
 	controls: {
 		forward: 0,
-		backward: 0
+		backward: 0,
+		jump: 0
+	},
+	jump() {
+		let genAngle = 0;
+		let iters = 0;
+		for (o in Circle.objs) {
+			let other = Circle.objs[o];
+			if (other == player.mat || !player.mat.isCollidingWith(other, 1) || !other.locked) continue;
+			genAngle += player.mat.angleTo(other);
+			iters++;
+		}
+		if (iters <= 0) return;
+		genAngle /= iters;
+		player.mat.accelerate(genAngle, -10);
 	}
 }
 
@@ -14,6 +28,9 @@ function gameLoop() {
 		player.mat.ang.vel += Math.min(0.1, Math.max(0.1 - player.mat.ang.vel/5, 0));
 	} else if (player.controls.backward) {
 		player.mat.ang.vel -= Math.min(0.1, Math.max(0.1 + player.mat.ang.vel/5, 0));
+	}
+	if (player.controls.jump) {
+		player.jump();
 	}
 	Circle.updateAll();
 	draw();

@@ -55,11 +55,11 @@ Object.defineProperty(Circle.prototype, "speed", {
 	}
 })
 
-Circle.prototype.isCollidingWith = function(other) {
+Circle.prototype.isCollidingWith = function(other, ease=0) {
 	let xdiff, ydiff;
 	xdiff = other.pos.x - this.pos.x;
 	ydiff = other.pos.y - this.pos.y;
-	return this.radius + other.radius >= Math.sqrt(xdiff*xdiff + ydiff*ydiff);
+	return this.radius + other.radius + ease >= Math.sqrt(xdiff*xdiff + ydiff*ydiff);
 }
 Circle.prototype.angleTo = function(other) {
 	if (other.pos) {
@@ -115,21 +115,20 @@ Circle.prototype.fixPos = function() {
 		let relAngle = this.angleTo(other);
 		this.pos.x = other.pos.x - Math.cos(relAngle)*(other.radius+this.radius-0.5);
 		this.pos.y = other.pos.y - Math.sin(relAngle)*(other.radius+this.radius-0.5);
-		let static = other.Fstatic*normalForce*this.radius;
-		let sliding = other.Fsliding*normalForce*this.radius;
+		let static = other.Fstatic*normalForce*2;
+		let sliding = other.Fsliding*normalForce*2;
 		let angVel = this.ang.vel;
 		let linVel = angVel*this.radius;
 		let perpenVel = Math.cos(this.angle-relAngle+Math.PI/2)*this.speed;
 		let onGroundVel = perpenVel - linVel;
 
-		if (onGroundVel > static) {
+		/*if (onGroundVel > static) {
 			let sign = onGroundVel/Math.abs(onGroundVel);
 			onGroundVel = sign*Math.max(0, Math.abs(onGroundVel) - sliding);
 			this.ang.vel = (onGroundVel + linVel) / this.radius;
 		} else {
 			this.ang.vel = perpenVel/this.radius;
-		}
-
+		}*/
 		let fAccel = perpenVel - linVel;
 		if (Math.abs(fAccel) > static) {
 			this.accelerate(relAngle+Math.PI/2, sliding * fAccel/Math.abs(fAccel/2.5));
@@ -170,6 +169,11 @@ Circle.prototype.move = function() {
 	this.calcAttractionAll();
 	this.fixPos();
 }
+Circle.prototype.airResistance = function() {
+	this.vel.x *= 0.995;
+	this.vel.y *= 0.995;
+	this.ang.vel *= 0.995;
+}
 
 Circle.updateAll = function() {
 	for (o in Circle.objs) {
@@ -178,7 +182,9 @@ Circle.updateAll = function() {
 	for (o in Circle.objs) {
 		Circle.objs[o].move();
 	}
-	//console.log(player.mat.vel.y);
+	for (o in Circle.objs) {
+		Circle.objs[o].airResistance();
+	}
 }
 
 function movePlayer() {
