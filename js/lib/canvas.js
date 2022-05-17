@@ -10,6 +10,12 @@ function drawMapCircle(obj) {
 	ctx.arc((obj.pos.x - player.mat.pos.x)*player.camera.zoom + c.width/2, (obj.pos.y - player.mat.pos.y)*player.camera.zoom + c.height/2, obj.radius*player.camera.zoom, 0, Math.PI*2);
 	ctx.fill();
 }
+function drawBodyCircle(obj) {
+	ctx.fillStyle = "#a66363";
+	ctx.beginPath();
+	ctx.arc((obj.pos.x - player.mat.pos.x)*player.camera.zoom + c.width/2, (obj.pos.y - player.mat.pos.y)*player.camera.zoom + c.height/2, obj.radius*player.camera.zoom, 0, Math.PI*2);
+	ctx.fill();
+}
 function drawPlayer() {
 	ctx.fillStyle = "#81395c";
 	ctx.beginPath();
@@ -25,8 +31,11 @@ function drawPlayer() {
 function draw() {
 	c.width = window.innerWidth;
 	c.height = window.innerHeight;
-	for (i in level.mapComps) {
-		drawMapCircle(level.mapComps[i]);
+	for (const map of level.mapComps) {
+		drawMapCircle(map);
+	}
+	for (const body of level.bodyComps) {
+		drawBodyCircle(body);
 	}
 	drawPlayer();
 }

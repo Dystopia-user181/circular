@@ -1,5 +1,8 @@
 let player = {
-	mat: Circle.add({x: 0, y: 0}, 25, {restitution: 0, gravity: 0}),
+	mat: Circle.add({x: 0, y: 0}, 25, {
+		restitution: 0.5,
+		gravity: 0
+	}),
 	camera: {
 		zoom: 1,
 	},
@@ -19,7 +22,7 @@ let player = {
 		}
 		if (iters <= 0) return;
 		genAngle /= iters;
-		player.mat.accelerate(genAngle, -10);
+		player.mat.setSpeedAtAngle(genAngle, -10);
 	}
 }
 
