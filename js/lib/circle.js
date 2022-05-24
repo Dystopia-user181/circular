@@ -154,8 +154,8 @@ Circle.prototype.bounce = function(other) {
 	const frictionForce = normalForce * this.friction + other.friction;
 	const frictionDir = -Math.sign(this.ang.vel * this.radius - other.ang.vel * other.radius +
 		this.getSpeedAtAngle(relAngle + Math.PI / 2) - other.getSpeedAtAngle(-relAngle + Math.PI / 2));
-	this.applyPerpendicularForce(frictionForce * frictionDir, relAngle, this.radius, true);
-	other.applyPerpendicularForce(frictionForce * frictionDir, -relAngle, other.radius, true);
+	this.applyFriction(frictionForce * frictionDir, relAngle);
+	other.applyFriction(frictionForce * frictionDir, -relAngle);
 }
 Circle.prototype.fixPos = function() {
 	const collidingList = [];
