@@ -1,4 +1,4 @@
-let World = {
-	G: 0.001,
-	T: 1
-}
+const World = {
+	G: 50,
+	T: 0.05
+};

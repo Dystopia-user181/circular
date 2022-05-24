@@ -6,7 +6,7 @@ function Circle({x, y}, r, otherProperties = {}) {
 	this.mass =  Math.PI * r*r;
 	this.gravity = this.mass * World.G;
 	this.restitution = 0;
-	this.friction = 0.4;
+	this.friction = 0.6;
 	this.locked = false;
 	this.collLayers = 1;
 	this.hasBounced = false;
@@ -90,14 +90,37 @@ Circle.prototype.setSpeedAtAngle = function(angle, speed) {
 	this.vel.y += Math.sin(angle) * (speed - speedAtAngle);
 }
 Circle.prototype.getSpeedAtAngle = function(angle) {
-	if (this.locked) return;
+	if (this.locked) return 0;
 	return Math.cos(this.angle - angle) * this.speed;
 }
+
 Circle.prototype.accelerate = function(angle, speed) {
 	if (this.locked) return;
 	this.vel.x += Math.cos(angle) * speed;
 	this.vel.y += Math.sin(angle) * speed;
 }
+Circle.prototype.accelerateAngular = function(speed) {
+	if (this.locked) return;
+	this.ang.vel += speed;
+}
+Circle.prototype.applyPerpendicularForce = function(mag, angle, distFromCircle = this.radius) {
+	if (this.locked) return;
+	this.accelerate((angle + Math.PI / 2), mag * World.T / this.mass);
+	this.accelerateAngular(mag * World.T / this.mass / distFromCircle);
+}
+Circle.prototype.applyFriction = function(mag, angle) {
+	if (this.locked) return;
+	const previousSpeedSign = Math.sign(this.getSpeedAtAngle(angle + Math.PI / 2));
+	const previousAngVelSign = Math.sign(this.ang.vel);
+	this.applyPerpendicularForce(mag, angle);
+	if (Math.abs(previousSpeedSign - Math.sign(this.getSpeedAtAngle(angle + Math.PI / 2))) >= 2) {
+		this.setSpeedAtAngle(angle + Math.PI / 2, 0);
+	}
+	if (Math.abs(previousAngVelSign - Math.sign(this.angVel)) >= 2) {
+		this.angVel = 0;
+	}
+}
+
 Circle.prototype.bounce = function(other) {
 	if (this.locked) return;
 	const relAngle = this.angleTo(other);
@@ -106,27 +129,41 @@ Circle.prototype.bounce = function(other) {
 
 
 	const restitution = this.restitution * other.restitution;
-	if (isNaN(collSpeedA) || Math.abs(collSpeedA) < 0.2) collSpeedA = 0;
-	if (isNaN(collSpeedB) || Math.abs(collSpeedB) < 0.2) collSpeedB = 0;
+	if (isNaN(collSpeedA)) collSpeedA = 0;
+	if (isNaN(collSpeedB)) collSpeedB = 0;
 	const massSum = this.mass + other.mass;
 
+	let normalForce;
 	if (other.locked) {
 		this.setSpeedAtAngle(relAngle, -collSpeedA * restitution);
+		normalForce = collSpeedA * (1 + restitution) * this.mass;
 	} else {
 		const elasticSpeedA = ((this.mass - other.mass) * collSpeedA + other.mass * 2 * collSpeedB) / massSum,
 			elasticSpeedB = (this.mass * 2 * collSpeedA + (other.mass - this.mass) * collSpeedB) / massSum;
 
 		const inelasticSpeed = (this.mass * collSpeedA + other.mass * collSpeedB) / massSum;
 
-		this.setSpeedAtAngle(relAngle, elasticSpeedA * restitution + inelasticSpeed * (1 - restitution));
-		other.setSpeedAtAngle(relAngle, elasticSpeedB * restitution + inelasticSpeed * (1 - restitution));
+		const bounceSpeedA = elasticSpeedA * restitution + inelasticSpeed * (1 - restitution),
+			bounceSpeedB = elasticSpeedB * restitution + inelasticSpeed * (1 - restitution);
+
+		this.setSpeedAtAngle(relAngle, Math.abs(bounceSpeedA) < 0.1 ? 0 : bounceSpeedA);
+		other.setSpeedAtAngle(relAngle, Math.abs(bounceSpeedB) < 0.1 ? 0 : bounceSpeedB);
+		normalForce = Math.abs(collSpeedA - bounceSpeedA) * this.mass;
 	}
-	return collSpeedA - collSpeedB;
+
+	const frictionForce = normalForce * this.friction + other.friction;
+	const frictionDir = -Math.sign(this.ang.vel * this.radius - other.ang.vel * other.radius +
+		this.getSpeedAtAngle(relAngle + Math.PI / 2) - other.getSpeedAtAngle(-relAngle + Math.PI / 2));
+	this.applyPerpendicularForce(frictionForce * frictionDir, relAngle, this.radius, true);
+	other.applyPerpendicularForce(frictionForce * frictionDir, -relAngle, other.radius, true);
 }
 Circle.prototype.fixPos = function() {
-	if (this.locked) return;
+	const collidingList = [];
 	for (const other of Circle.objs) {
 		if (other == this || !this.isCollidingWith(other) || other.hasBounced) continue;
+		collidingList.push(other);
+	}
+	for (const other of collidingList) {
 		const relAngle = this.angleTo(other);
 		if (!other.locked) {
 			const distance = other.radius + this.radius - this.distanceTo(other);
@@ -151,11 +188,11 @@ Circle.prototype.attractionTo = function(other) {
 		xdiff = other.x - this.pos.x;
 		ydiff = other.y - this.pos.y;
 	}
-	return this.gravity / (xdiff * xdiff + ydiff * ydiff) * 100;
+	return this.gravity / (xdiff * xdiff + ydiff * ydiff);
 }
 Circle.prototype.attract = function(other) {
-	let relAngle = other.angleTo(this);
-	let attraction = this.attractionTo(other);
+	const relAngle = other.angleTo(this);
+	const attraction = this.attractionTo(other) * World.T;
 	other.accelerate(relAngle, attraction);
 }
 Circle.prototype.calcAttractionAll = function() {
@@ -167,6 +204,7 @@ Circle.prototype.calcAttractionAll = function() {
 	}
 }
 Circle.prototype.move = function() {
+	if (this.locked) return;
 	this.pos.x += this.vel.x * World.T;
 	this.pos.y += this.vel.y * World.T;
 	this.ang.pos += this.ang.vel * World.T;

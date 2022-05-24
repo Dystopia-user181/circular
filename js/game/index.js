@@ -1,7 +1,8 @@
 let player = {
 	mat: Circle.add({x: 0, y: 0}, 25, {
 		restitution: 0.5,
-		gravity: 0
+		gravity: 0,
+		friction: 5
 	}),
 	camera: {
 		zoom: 1,
@@ -22,15 +23,15 @@ let player = {
 		}
 		if (iters <= 0) return;
 		genAngle /= iters;
-		player.mat.setSpeedAtAngle(genAngle, -10);
+		player.mat.setSpeedAtAngle(genAngle, -200);
 	}
 }
 
 function gameLoop() {
 	if (player.controls.forward) {
-		player.mat.ang.vel += Math.min(0.1, Math.max(0.1 - player.mat.ang.vel/5, 0));
+		player.mat.ang.vel += Math.max(10 - player.mat.ang.vel, 0) * World.T;
 	} else if (player.controls.backward) {
-		player.mat.ang.vel -= Math.min(0.1, Math.max(0.1 + player.mat.ang.vel/5, 0));
+		player.mat.ang.vel -= Math.max(10 + player.mat.ang.vel, 0) * World.T;
 	}
 	if (player.controls.jump) {
 		player.jump();
