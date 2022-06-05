@@ -53,12 +53,9 @@ Object.defineProperty(Circle.prototype, "speed", {
 	}
 });
 
-Circle.prototype.isCollidingWith = function(other, ease = 0) {
+Circle.prototype.isCollidingWith = function(other, ease = 0.1) {
 	if (!(this.collLayers & other.collLayers)) return false;
-	let xdiff, ydiff;
-	xdiff = other.pos.x - this.pos.x;
-	ydiff = other.pos.y - this.pos.y;
-	return this.radius + other.radius + ease > this.distanceTo(other);
+	return this.radius + other.radius - ease > this.distanceTo(other);
 }
 Circle.prototype.angleTo = function(other) {
 	let xdiff, ydiff;
@@ -116,8 +113,8 @@ Circle.prototype.applyFriction = function(mag, angle) {
 	if (Math.abs(previousSpeedSign - Math.sign(this.getSpeedAtAngle(angle + Math.PI / 2))) >= 2) {
 		this.setSpeedAtAngle(angle + Math.PI / 2, 0);
 	}
-	if (Math.abs(previousAngVelSign - Math.sign(this.angVel)) >= 2) {
-		this.angVel = 0;
+	if (Math.abs(previousAngVelSign - Math.sign(this.ang.vel)) >= 2) {
+		this.ang.vel = 0;
 	}
 }
 
@@ -152,18 +149,22 @@ Circle.prototype.bounce = function(other) {
 	}
 
 	const frictionForce = normalForce * this.friction + other.friction;
-	const frictionDir = -Math.sign(this.ang.vel * this.radius - other.ang.vel * other.radius +
-		this.getSpeedAtAngle(relAngle + Math.PI / 2) - other.getSpeedAtAngle(-relAngle + Math.PI / 2));
+	const surfaceSpeed = this.ang.vel * this.radius - other.ang.vel * other.radius +
+	this.getSpeedAtAngle(relAngle + Math.PI / 2) - other.getSpeedAtAngle(-relAngle + Math.PI / 2);
+	if (surfaceSpeed < 0.01) return;
+	const frictionDir = -Math.sign(surfaceSpeed);
 	this.applyFriction(frictionForce * frictionDir, relAngle);
 	other.applyFriction(frictionForce * frictionDir, -relAngle);
 }
 Circle.prototype.fixPos = function() {
+	if (this.locked) return;
 	const collidingList = [];
 	for (const other of Circle.objs) {
 		if (other == this || !this.isCollidingWith(other) || other.hasBounced) continue;
 		collidingList.push(other);
 	}
 	for (const other of collidingList) {
+		this.bounce(other);
 		const relAngle = this.angleTo(other);
 		if (!other.locked) {
 			const distance = other.radius + this.radius - this.distanceTo(other);
@@ -172,10 +173,9 @@ Circle.prototype.fixPos = function() {
 			this.pos.y -= distance * Math.sin(relAngle);
 			other.pos.y += distance * Math.sin(relAngle);
 		} else {
-			this.pos.x = other.pos.x - Math.cos(relAngle) * (other.radius + this.radius - 0.5);
-			this.pos.y = other.pos.y - Math.sin(relAngle) * (other.radius + this.radius - 0.5);
+			this.pos.x = other.pos.x - Math.cos(relAngle) * (other.radius + this.radius);
+			this.pos.y = other.pos.y - Math.sin(relAngle) * (other.radius + this.radius);
 		}
-		this.bounce(other);
 	}
 	this.hasBounced = true;
 }
@@ -209,23 +209,27 @@ Circle.prototype.move = function() {
 	this.pos.y += this.vel.y * World.T;
 	this.ang.pos += this.ang.vel * World.T;
 	this.calcAttractionAll();
-	this.fixPos();
 }
 Circle.prototype.airResistance = function() {
-	this.vel.x *= 0.995;
-	this.vel.y *= 0.995;
-	this.ang.vel *= 0.995;
+	//this.vel.x *= 0.995;
+	//this.vel.y *= 0.995;
+	//this.ang.vel *= 0.995;
 }
 
 Circle.updateAll = function() {
-	for (o in Circle.objs) {
-		Circle.objs[o].hasBounced = false;
+	for (const o of Circle.objs) {
+		o.move();
 	}
-	for (o in Circle.objs) {
-		Circle.objs[o].move();
+	for (let i = 0; i < 5; i++) {
+		for (const o of Circle.objs) {
+			o.hasBounced = false;
+		}
+		for (const o of Circle.objs) {
+			o.fixPos();
+		}
 	}
-	for (o in Circle.objs) {
-		Circle.objs[o].airResistance();
+	for (const o of Circle.objs) {
+		o.airResistance();
 	}
 }
 

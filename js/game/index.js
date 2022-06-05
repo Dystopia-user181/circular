@@ -17,7 +17,7 @@ let player = {
 		let iters = 0;
 		for (o in Circle.objs) {
 			let other = Circle.objs[o];
-			if (other == player.mat || !player.mat.isCollidingWith(other, 1) || !other.locked) continue;
+			if (other == player.mat || !player.mat.isCollidingWith(other, -0.1) || !other.locked) continue;
 			genAngle += player.mat.angleTo(other);
 			iters++;
 		}
